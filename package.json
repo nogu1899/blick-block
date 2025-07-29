@@ -1,0 +1,17 @@
+{
+  "name": "blick-block",
+  "version": "1.0.0",
+  "description": "",
+  "main": "ball.test.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "canvas": "^3.1.2",
+    "jest": "^30.0.5",
+    "jsdom": "^26.1.0"
+  }
+}

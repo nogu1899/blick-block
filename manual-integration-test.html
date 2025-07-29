@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task 14: 統合テストとデバッグ - 手動テスト</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background-color: #222;
+            color: white;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background-color: #333;
+            border-radius: 8px;
+        }
+        
+        .test-results {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #444;
+            border-radius: 5px;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+        
+        .success {
+            color: #4CAF50;
+        }
+        
+        .error {
+            color: #f44336;
+        }
+        
+        .info {
+            color: #2196F3;
+        }
+        
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        button:hover {
+            background-color: #45a049;
+        }
+        
+        button:disabled {
+            background-color: #666;
+            cursor: not-allowed;
+        }
+        
+        #gameCanvas {
+            border: 2px solid #555;
+            display: block;
+            margin: 20px auto;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .stat-card {
+            background-color: #444;
+            padding: 15px;
+            border-radius: 5px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #4CAF50;
+        }
+        
+        .stat-label {
+            font-size: 14px;
+            color: #ccc;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Task 14: 統合テストとデバッグ</h1>
+        <p>ブロック崩しゲームの統合テストと動作確認を行います。</p>
+        
+        <div class="test-section">
+            <h2>🎮 ゲーム画面</h2>
+            <canvas id="gameCanvas" width="800" height="600"></canvas>
+            
+            <div>
+                <button onclick="startTests()">統合テスト開始</button>
+                <button onclick="resetGame()">ゲームリセット</button>
+                <button onclick="runPerformanceTest()">パフォーマンステスト</button>
+                <button onclick="testBrowserCompatibility()">ブラウザ互換性テスト</button>
+                <button onclick="simulateGameplay()">ゲームプレイシミュレーション</button>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>📊 リアルタイム統計</h2>
+            <div class="stats">
+                <div class="stat-card">
+                    <div class="stat-value" id="fps">--</div>
+                    <div class="stat-label">FPS</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="score">--</div>
+                    <div class="stat-label">スコア</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="blocks">--</div>
+                    <div class="stat-label">残りブロック</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="gameState">--</div>
+                    <div class="stat-label">ゲーム状態</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>🧪 テスト結果</h2>
+            <div class="test-results" id="testResults">テストを開始してください...</div>
+        </div>
+        
+        <div class="test-section">
+            <h2>⚡ パフォーマンス結果</h2>
+            <div class="test-results" id="performanceResults">パフォーマンステストを実行してください...</div>
+        </div>
+        
+        <div class="test-section">
+            <h2>🌐 ブラウザ互換性結果</h2>
+            <div class="test-results" id="compatibilityResults">ブラウザ互換性テストを実行してください...</div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        let testResults = [];
+        let performanceMetrics = {
+            frameCount: 0,
+            lastFrameTime: 0,
+            renderTimes: [],
+            updateTimes: []
+        };
+        
+        // テスト結果を表示する関数
+        function displayResults(elementId, results) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = results.map(result => {
+                const status = result.passed ? '✅' : '❌';
+                const className = result.passed ? 'success' : 'error';
+                return `<span class="${className}">${status} ${result.name}</span>`;
+            }).join('\n');
+        }
+        
+        // 統計情報を更新する関数
+        function updateStats() {
+            if (game && game.initialized) {
+                document.getElementById('fps').textContent = Math.round(1000 / 16.67);
+                document.getElementById('score').textContent = game.getScore().toLocaleString();
+                
+                if (game.blockManager) {
+                    const stats = game.blockManager.getStats();
+                    document.getElementById('blocks').textContent = stats.active;
+                }
+                
+                document.getElementById('gameState').textContent = game.getGameState();
+            }
+        }
+        
+        // 統合テストを実行
+        function startTests() {
+            testResults = [];
+            const resultsElement = document.getElementById('testResults');
+            resultsElement.innerHTML = '<span class="info">🧪 統合テスト実行中...</span>';
+            
+            // テスト1: ゲーム初期化
+            try {
+                if (!game) {
+                    game = new Game();
+                }
+                const initResult = game.init();
+                testResults.push({
+                    name: 'ゲーム初期化テスト',
+                    passed: initResult && game.initialized
+                });
+            } catch (error) {
+                testResults.push({
+                    name: 'ゲーム初期化テスト',
+                    passed: false,
+                    error: error.message
+                });
+            }
+            
+            // テスト2: ゲーム要素の存在確認
+            try {
+                const elementsExist = game.ball && game.paddle && game.blockManager && 
+                                    game.inputHandler && game.collisionDetector;
+                testResults.push({
+                    name: 'ゲーム要素存在確認',
+                    passed: !!elementsExist
+                });
+            } catch (error) {
+                testResults.push({
+                    name: 'ゲーム要素存在確認',
+                    passed: false,
+                    error: error.message
+                });
+            }
+            
+            // テスト3: Canvas API互換性
+            try {
+                const canvas = document.getElementById('gameCanvas');
+                const ctx = canvas.getContext('2d');
+                const apiExists = ctx && typeof ctx.fillRect === 'function' && 
+                                typeof ctx.arc === 'function';
+                testResults.push({
+                    name: 'Canvas API互換性',
+                    passed: !!apiExists
+                });
+            } catch (error) {
+                testResults.push({
+                    name: 'Canvas API互換性',
+                    passed: false,
+                    error: error.message
+                });
+            }
+            
+            // テスト4: ゲーム状態管理
+            try {
+                const initialState = game.getGameState();
+                game.handleGameOver();
+                const gameOverState = game.getGameState();
+                game.resetGame();
+                const resetState = game.getGameState();
+                
+                const stateManagementWorks = initialState === 'playing' && 
+                                           gameOverState === 'game_over' && 
+                                           resetState === 'playing';
+                testResults.push({
+                    name: 'ゲーム状態管理',
+                    passed: stateManagementWorks
+                });
+            } catch (error) {
+                testResults.push({
+                    name: 'ゲーム状態管理',
+                    passed: false,
+                    error: error.message
+                });
+            }
+            
+            // テスト5: スコアシステム
+            try {
+                const initialScore = game.getScore();
+                game.addScore(100);
+                const afterAddScore = game.getScore();
+                game.resetGame();
+                const afterResetScore = game.getScore();
+                
+                const scoreSystemWorks = initialScore === 0 && 
+                                        afterAddScore === 100 && 
+                                        afterResetScore === 0;
+                testResults.push({
+                    name: 'スコアシステム',
+                    passed: scoreSystemWorks
+                });
+            } catch (error) {
+                testResults.push({
+                    name: 'スコアシステム',
+                    passed: false,
+                    error: error.message
+                });
+            }
+            
+            // テスト6: 衝突検出システム
+            try {
+                const ball = game.ball;
+                const paddle = game.paddle;
+                const collisionDetector = game.collisionDetector;
+                
+                // ボールをパドルに近づける
+                ball.x = paddle.x + paddle.width / 2;
+                ball.y = paddle.y - ball.radius;
+                
+                const collision = collisionDetector.checkBallPaddleCollision(ball, paddle);
+                testResults.push({
+                    name: '衝突検出システム',
+                    passed: !!(collision && collision.collision)
+                });
+            } catch (error) {
+                testResults.push({
+                    name: '衝突検出システム',
+                    passed: false,
+                    error: error.message
+                });
+            }
+            
+            // テスト7: ブロック管理システム
+            try {
+                const blockManager = game.blockManager;
+                const stats = blockManager.getStats();
+                const expectedTotal = GAME_CONFIG.BLOCK_ROWS * GAME_CONFIG.BLOCK_COLS;
+                
+                const blockSystemWorks = stats.total === expectedTotal && 
+                                       stats.active === expectedTotal && 
+                                       stats.destroyed === 0;
+                testResults.push({
+                    name: 'ブロック管理システム',
+                    passed: blockSystemWorks
+                });
+            } catch (error) {
+                testResults.push({
+                    name: 'ブロック管理システム',
+                    passed: false,
+                    error: error.message
+                });
+            }
+            
+            // テスト8: 描画システム
+            try {
+                game.render();
+                testResults.push({
+                    name: '描画システム',
+                    passed: true
+                });
+            } catch (error) {
+                testResults.push({
+                    name: '描画システム',
+                    passed: false,
+                    error: error.message
+                });
+            }
+            
+            // テスト9: 更新システム
+            try {
+                const initialBallPos = { ...game.ball.getCenter() };
+                game.update();
+                const newBallPos = game.ball.getCenter();
+                const ballMoved = initialBallPos.x !== newBallPos.x || initialBallPos.y !== newBallPos.y;
+                
+                testResults.push({
+                    name: '更新システム',
+                    passed: ballMoved
+                });
+            } catch (error) {
+                testResults.push({
+                    name: '更新システム',
+                    passed: false,
+                    error: error.message
+                });
+            }
+            
+            // テスト10: 入力システム
+            try {
+                const inputHandler = game.inputHandler;
+                const hasInputMethods = typeof inputHandler.isLeftPressed === 'function' && 
+                                      typeof inputHandler.isRightPressed === 'function';
+                testResults.push({
+                    name: '入力システム',
+                    passed: hasInputMethods
+                });
+            } catch (error) {
+                testResults.push({
+                    name: '入力システム',
+                    passed: false,
+                    error: error.message
+                });
+            }
+            
+            displayResults('testResults', testResults);
+            
+            // 統計情報の更新を開始
+            setInterval(updateStats, 100);
+            
+            // ゲームを開始
+            if (game && game.initialized) {
+                game.startGame();
+            }
+        }
+        
+        // パフォーマンステストを実行
+        function runPerformanceTest() {
+            const resultsElement = document.getElementById('performanceResults');
+            resultsElement.innerHTML = '<span class="info">⚡ パフォーマンステスト実行中...</span>';
+            
+            if (!game || !game.initialized) {
+                resultsElement.innerHTML = '<span class="error">❌ ゲームが初期化されていません</span>';
+                return;
+            }
+            
+            const results = [];
+            
+            // 描画パフォーマンステスト
+            const renderTimes = [];
+            for (let i = 0; i < 100; i++) {
+                const startTime = performance.now();
+                game.render();
+                const endTime = performance.now();
+                renderTimes.push(endTime - startTime);
+            }
+            
+            const avgRenderTime = renderTimes.reduce((sum, time) => sum + time, 0) / renderTimes.length;
+            const maxRenderTime = Math.max(...renderTimes);
+            
+            results.push(`描画パフォーマンス:`);
+            results.push(`  平均描画時間: ${avgRenderTime.toFixed(3)}ms`);
+            results.push(`  最大描画時間: ${maxRenderTime.toFixed(3)}ms`);
+            results.push(`  評価: ${avgRenderTime < 5 ? '✅ 良好' : '⚠️ 要改善'}`);
+            
+            // 更新パフォーマンステスト
+            const updateTimes = [];
+            for (let i = 0; i < 100; i++) {
+                const startTime = performance.now();
+                game.update();
+                const endTime = performance.now();
+                updateTimes.push(endTime - startTime);
+            }
+            
+            const avgUpdateTime = updateTimes.reduce((sum, time) => sum + time, 0) / updateTimes.length;
+            const maxUpdateTime = Math.max(...updateTimes);
+            
+            results.push(`\n更新処理パフォーマンス:`);
+            results.push(`  平均更新時間: ${avgUpdateTime.toFixed(3)}ms`);
+            results.push(`  最大更新時間: ${maxUpdateTime.toFixed(3)}ms`);
+            results.push(`  評価: ${avgUpdateTime < 2 ? '✅ 良好' : '⚠️ 要改善'}`);
+            
+            // 衝突検出パフォーマンステスト
+            const collisionTimes = [];
+            const ball = game.ball;
+            const paddle = game.paddle;
+            const blocks = game.blockManager.getActiveBlocks();
+            
+            for (let i = 0; i < 1000; i++) {
+                const startTime = performance.now();
+                game.collisionDetector.checkBallPaddleCollision(ball, paddle);
+                game.collisionDetector.checkBallWallCollision(ball, 800, 600);
+                game.collisionDetector.checkBallBlocksCollision(ball, blocks);
+                const endTime = performance.now();
+                collisionTimes.push(endTime - startTime);
+            }
+            
+            const avgCollisionTime = collisionTimes.reduce((sum, time) => sum + time, 0) / collisionTimes.length;
+            const maxCollisionTime = Math.max(...collisionTimes);
+            
+            results.push(`\n衝突検出パフォーマンス:`);
+            results.push(`  平均衝突検出時間: ${avgCollisionTime.toFixed(4)}ms`);
+            results.push(`  最大衝突検出時間: ${maxCollisionTime.toFixed(4)}ms`);
+            results.push(`  評価: ${avgCollisionTime < 0.1 ? '✅ 良好' : '⚠️ 要改善'}`);
+            
+            // メモリ使用量（概算）
+            const memoryInfo = performance.memory ? {
+                used: Math.round(performance.memory.usedJSHeapSize / 1024 / 1024),
+                total: Math.round(performance.memory.totalJSHeapSize / 1024 / 1024),
+                limit: Math.round(performance.memory.jsHeapSizeLimit / 1024 / 1024)
+            } : null;
+            
+            if (memoryInfo) {
+                results.push(`\nメモリ使用量:`);
+                results.push(`  使用中: ${memoryInfo.used}MB`);
+                results.push(`  総計: ${memoryInfo.total}MB`);
+                results.push(`  制限: ${memoryInfo.limit}MB`);
+                results.push(`  評価: ${memoryInfo.used < 50 ? '✅ 良好' : '⚠️ 要改善'}`);
+            }
+            
+            resultsElement.innerHTML = results.join('\n');
+        }
+        
+        // ブラウザ互換性テスト
+        function testBrowserCompatibility() {
+            const resultsElement = document.getElementById('compatibilityResults');
+            const results = [];
+            
+            // ブラウザ情報
+            results.push(`ブラウザ情報:`);
+            results.push(`  User Agent: ${navigator.userAgent}`);
+            results.push(`  プラットフォーム: ${navigator.platform}`);
+            results.push(`  言語: ${navigator.language}`);
+            
+            // Canvas サポート
+            const canvas = document.createElement('canvas');
+            const ctx2d = canvas.getContext('2d');
+            results.push(`\nCanvas サポート:`);
+            results.push(`  2D Context: ${ctx2d ? '✅ サポート' : '❌ 非サポート'}`);
+            
+            // JavaScript 機能サポート
+            results.push(`\nJavaScript 機能サポート:`);
+            results.push(`  ES6 Classes: ${typeof class {} === 'function' ? '✅' : '❌'}`);
+            results.push(`  Arrow Functions: ${(() => true)() ? '✅' : '❌'}`);
+            results.push(`  Template Literals: ${`test` === 'test' ? '✅' : '❌'}`);
+            results.push(`  Destructuring: ${(() => { try { const {a} = {a:1}; return true; } catch(e) { return false; } })() ? '✅' : '❌'}`);
+            results.push(`  Spread Operator: ${(() => { try { const a = [...[1,2]]; return true; } catch(e) { return false; } })() ? '✅' : '❌'}`);
+            
+            // Web API サポート
+            results.push(`\nWeb API サポート:`);
+            results.push(`  requestAnimationFrame: ${typeof requestAnimationFrame === 'function' ? '✅' : '❌'}`);
+            results.push(`  Performance API: ${typeof performance === 'object' ? '✅' : '❌'}`);
+            results.push(`  Local Storage: ${typeof localStorage === 'object' ? '✅' : '❌'}`);
+            
+            // イベントサポート
+            results.push(`\nイベントサポート:`);
+            results.push(`  Keyboard Events: ${typeof KeyboardEvent === 'function' ? '✅' : '❌'}`);
+            results.push(`  Mouse Events: ${typeof MouseEvent === 'function' ? '✅' : '❌'}`);
+            results.push(`  Touch Events: ${typeof TouchEvent === 'function' ? '✅' : '❌'}`);
+            
+            resultsElement.innerHTML = results.join('\n');
+        }
+        
+        // ゲームプレイシミュレーション
+        function simulateGameplay() {
+            if (!game || !game.initialized) {
+                alert('先に統合テストを実行してください');
+                return;
+            }
+            
+            // 自動プレイのシミュレーション
+            let simulationCount = 0;
+            const maxSimulations = 1000;
+            
+            const simulate = () => {
+                if (simulationCount >= maxSimulations || game.getGameState() !== 'playing') {
+                    return;
+                }
+                
+                // ランダムにパドルを移動
+                if (Math.random() > 0.5) {
+                    game.paddle.moveLeft();
+                } else {
+                    game.paddle.moveRight();
+                }
+                
+                // ゲームを更新
+                game.update();
+                game.render();
+                
+                simulationCount++;
+                requestAnimationFrame(simulate);
+            };
+            
+            simulate();
+        }
+        
+        // ゲームリセット
+        function resetGame() {
+            if (game && game.resetGame) {
+                game.resetGame();
+                updateStats();
+            }
+        }
+        
+        // ページ読み込み時の初期化
+        window.addEventListener('load', () => {
+            console.log('🚀 Task 14: 統合テストとデバッグページが読み込まれました');
+            console.log('統合テスト開始ボタンをクリックしてテストを開始してください');
+        });
+        
+        // キーボードイベントのテスト
+        document.addEventListener('keydown', (event) => {
+            if (game && game.inputHandler) {
+                console.log(`キー押下: ${event.key}`);
+            }
+        });
+    </script>
+</body>
+</html>

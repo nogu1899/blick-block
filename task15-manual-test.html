@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task 15: 最終調整とポリッシュ - 手動テスト</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .test-info {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 15px;
+            margin: 10px;
+            border-radius: 8px;
+            font-size: 14px;
+            text-align: left;
+        }
+        .test-info h3 {
+            color: #2a5298;
+            margin-top: 0;
+        }
+        .test-info ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        .test-info li {
+            margin: 5px 0;
+        }
+        .highlight {
+            background: #ffff00;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>ブロック崩しゲーム - ポリッシュ版</h1>
+        
+        <div class="test-info">
+            <h3>🎮 Task 15: 最終調整とポリッシュ - テスト項目</h3>
+            <ul>
+                <li><span class="highlight">ゲームバランス調整</span>: ボール速度が段階的に増加、コンボシステム</li>
+                <li><span class="highlight">視覚的改善</span>: ボールの軌跡、パーティクル、グラデーション効果</li>
+                <li><span class="highlight">エフェクト</span>: 画面振動、フラッシュ効果、改良されたUI</li>
+                <li><span class="highlight">エラーハンドリング</span>: 安全な描画、無効値の処理</li>
+            </ul>
+            <p><strong>テスト方法:</strong> ゲームをプレイして、ブロックを破壊時のエフェクト、コンボ表示、視覚的改善を確認してください。</p>
+        </div>
+        
+        <div class="score-display">
+            <span>スコア: <span id="score">0</span></span>
+        </div>
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        <div class="game-info">
+            <p>矢印キーでパドルを操作</p>
+            <p>スペースキーでリスタート</p>
+            <p><strong>新機能:</strong> コンボシステム、視覚エフェクト、改良されたUI</p>
+        </div>
+        <div id="gameMessage" class="game-message"></div>
+        
+        <div class="test-info">
+            <h3>🔍 確認ポイント</h3>
+            <ul>
+                <li>ボールに軌跡が表示される</li>
+                <li>ブロック破壊時に画面が振動する</li>
+                <li>コンボが表示される（連続でブロックを破壊）</li>
+                <li>ボールの速度が徐々に上がる</li>
+                <li>グラデーション効果が適用されている</li>
+                <li>改良されたカラーパレット</li>
+                <li>エラーが発生しない</li>
+            </ul>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
